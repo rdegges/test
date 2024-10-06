@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+    <head>
+        <title>GitHub Stats Dashboard</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body {
+                background-color: #fff;
+                color: #333;
+                font-family: "Poppins", sans-serif;
+            }
+            .counter-container {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+            .counter-box {
+                padding: 10px;
+                margin: 0 10px;
+                text-align: center;
+                border-radius: 4px;
+                box-shadow:
+                    0 1px 3px rgba(0, 0, 0, 0.12),
+                    0 1px 2px rgba(0, 0, 0, 0.24);
+            }
+            .counter-value {
+                font-size: 24px;
+                font-weight: 600;
+                color: #333;
+            }
+            .counter-label {
+                font-size: 14px;
+                color: #666;
+            }
+            .plot-container {
+                display: flex;
+                justify-content: center;
+            }
+            #dataPlot {
+                width: 80%;
+                height: 500px;
+            }
+            .dashboard-title {
+                text-align: center;
+                font-size: 28px;
+                margin-bottom: 20px;
+                color: #333;
+                font-weight: 600;
+            }
+            #commitCounter .counter-box {
+                background-color: #e6f2ff;
+            }
+            #newVulnCounter .counter-box {
+                background-color: #ffebeb;
+            }
+            #fixedVulnCounter .counter-box {
+                background-color: #e6f7e6;
+            }
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="dashboard-title">GitHub Stats Dashboard</div>
+        <div class="counter-container">
+            <div
+                class="counter-box"
+                id="commitCounter"
+                style="background-color: #add8e6"
+            >
+                <div class="counter-value">0</div>
+                <div class="counter-label">Code Pushes</div>
+            </div>
+            <div
+                class="counter-box"
+                id="newVulnCounter"
+                style="background-color: #f88379"
+            >
+                <div class="counter-value">0</div>
+                <div class="counter-label">Snyk-discovered Vulns</div>
+            </div>
+            <div
+                class="counter-box"
+                id="fixedVulnCounter"
+                style="background-color: #90ee90"
+            >
+                <div class="counter-value">0</div>
+                <div class="counter-label">Snyk-fixed Vulns</div>
+            </div>
+        </div>
+        <div class="plot-container">
+            <div id="dataPlot"></div>
+        </div>
+        <script>
+            function formatNumber(num) {
+                if (num >= 1000000000) {
+                    return (num / 1000000000).toFixed(1) + "b";
+                } else if (num >= 1000000) {
+                    return (num / 1000000).toFixed(1) + "m";
+                } else if (num >= 1000) {
+                    return (num / 1000).toFixed(1) + "k";
+                } else {
+                    return num.toFixed(0);
+                }
+            }
+
+            var trace1 = {
+                x: [],
+                y: [],
+                mode: "lines",
+                name: "Code Pushes",
+                line: {
+                    color: "#0000ff", // Changed color to blue
+                },
+            };
+
+            var trace2 = {
+                x: [],
+                y: [],
+                mode: "lines",
+                name: "Snyk-discovered Vulns",
+                line: {
+                    color: "#ff3333",
+                },
+            };
+
+            var trace3 = {
+                x: [],
+                y: [],
+                mode: "lines",
+                name: "Snyk-fixed Vulns",
+                line: {
+                    color: "#33cc33",
+                },
+            };
+
+            var data = [trace1, trace2, trace3];
+
+            var layout = {
+                xaxis: {
+                    title: "Time (seconds)",
+                    titlefont: {
+                        color: "#333",
+                    },
+                    tickvals: [],
+                    ticktext: [],
+                    range: [0, 30] // Set the x-axis range to show only the last 30 seconds
+                },
+                yaxis: {
+                    title: "Value",
+                    titlefont: {
+                        color: "#333",
+                    },
+                },
+                plot_bgcolor: "#fff",
+                paper_bgcolor: "#fff",
+                font: {
+                    color: "#333",
+                },
+            };
+
+            Plotly.newPlot("dataPlot", data, layout);
+
+            var commitsPerSecond = 143;
+            var newVulnsPerSecond = 23;
+            var fixedVulnsPerSecond = 1;
+            var totalCommits = 0;
+            var totalNewVulns = 0;
+            var totalFixedVulns = 0;
+            var startTime = new Date().getTime();
+            var currentSecond = 0;
+            var oldestSecond = 0;
+
+            setInterval(function () {
+                var currentTime = new Date().getTime();
+                var timeDiff = currentTime - startTime;
+                var commits = commitsPerSecond * (timeDiff / 1000);
+                var newVulns = newVulnsPerSecond * (timeDiff / 1000);
+                var fixedVulns = fixedVulnsPerSecond * (timeDiff / 1000);
+
+                totalCommits = commits;
+                totalNewVulns = newVulns;
+                totalFixedVulns = fixedVulns;
+
+                document
+                    .getElementById("commitCounter")
+                    .querySelector(".counter-value").textContent = formatNumber(
+                    Math.round(totalCommits),
+                );
+                document
+                    .getElementById("newVulnCounter")
+                    .querySelector(".counter-value").textContent = formatNumber(
+                    Math.round(totalNewVulns),
+                );
+                document
+                    .getElementById("fixedVulnCounter")
+                    .querySelector(".counter-value").textContent = formatNumber(
+                    Math.round(totalFixedVulns),
+                );
+
+                var update = {
+                    x: [[currentSecond], [currentSecond], [currentSecond]],
+                    y: [[commits], [newVulns], [fixedVulns]],
+                };
+
+                // Update the x-axis tickvals and ticktext arrays
+                layout.xaxis.tickvals.push(currentSecond);
+                layout.xaxis.ticktext.push(currentSecond);
+
+                // Remove the oldest second from the x-axis tickvals and ticktext
+                if (layout.xaxis.tickvals.length > 30) {
+                    layout.xaxis.tickvals.shift();
+                    layout.xaxis.ticktext.shift();
+                    oldestSecond++;
+                }
+
+                // Update the x-axis range to show the last 30 seconds
+                layout.xaxis.range = [oldestSecond, currentSecond];
+
+                Plotly.extendTraces("dataPlot", update, [0, 1, 2]);
+                Plotly.relayout("dataPlot", layout);
+
+                currentSecond++;
+            }, 1000); // Changed interval to 1000ms (1 second)
+        </script>
+    </body>
+</html>
